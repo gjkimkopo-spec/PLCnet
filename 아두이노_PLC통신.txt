@@ -1,0 +1,87 @@
+#include <TimerOne.h>
+
+void setup() {
+ Serial.begin(9600);
+ Timer1.initialize(10000);
+ Timer1.attachInterrupt(Timer_fnc);
+
+ pinMode(30,OUTPUT);
+ pinMode(32,OUTPUT);
+ pinMode(34,OUTPUT);
+ pinMode(36,OUTPUT);
+
+ pinMode(22,INPUT_PULLUP);
+ pinMode(24,INPUT_PULLUP);
+ pinMode(26,INPUT_PULLUP);
+ pinMode(28,INPUT_PULLUP);
+ 
+
+ digitalWrite(30,HIGH);
+ digitalWrite(32,HIGH);
+ digitalWrite(34,HIGH);
+ digitalWrite(36,HIGH);
+
+}
+int i;
+int sw1, sw2, sw3, sw4;
+int state;
+void Timer_fnc()
+{
+  sw1 = digitalRead(22);
+  sw2 = digitalRead(24);
+  sw3 = digitalRead(26);
+  sw4 = digitalRead(28);
+  
+
+  //Serial.print("sw1:");Serial.print(sw1); Serial.print("  sw2:");Serial.print(sw2);
+  //Serial.print("  sw3:");Serial.print(sw3);
+  //Serial.print("  sw4:");Serial.println(sw4);
+
+
+  if(sw1==1 && sw2==1 && sw3==1 && sw4==1 ){
+    // 인식할 필요가 없음(스위치가 눌리지 않았기 때문)
+    state = 0;
+  }
+  else{
+    if(sw1==0){
+      state = 100;
+    }
+    if(sw2==0){
+      state = 200;
+    }
+    if(sw3==0){
+      state = 300;
+    }
+    if(sw4==0){
+      state = 400;
+    }
+    
+  }
+}
+
+void loop() {
+
+    switch(state){
+      case 100:
+        digitalWrite(30,LOW);//명령어는 한번만 보낸다.
+        state=500;
+        break;
+      case 200:
+        digitalWrite(32,LOW);//명령어는 한번만 보낸다.
+        state=500;
+        break;
+      case 300:
+        digitalWrite(34,LOW);//명령어는 한번만 보낸다.
+        state=500;
+        break;  
+      case 500:
+        break;
+      case 400:
+        digitalWrite(30,HIGH);
+        digitalWrite(32,HIGH);
+        digitalWrite(34,HIGH);
+        digitalWrite(36,HIGH);
+        break;
+    }
+  
+}
