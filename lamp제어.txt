@@ -1,0 +1,117 @@
+#include <TimerOne.h>
+#include <SPI.h>
+#include <Ethernet.h>
+
+//아두이노 IP, MAC
+byte mac[]={0xAC, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip(192, 168, 3, 21);
+
+// PLC IP
+IPAddress plc_ip(192, 168, 3, 39);
+EthernetClient client;
+
+const char* FRAME_3E = "5000";
+const char* HOSTSTATION = "00FF03FF00";
+const char* DATALENGTH = "0020";
+const char* TIMER = "0010";
+
+const char* CMD = "1401";
+const char* SUBCMD="0000";
+const char* DEVICE ="M*";
+const char* DEVICENUM="000100";
+const char* DEVICEPOINT="0002";
+
+String cmd=String(FRAME_3E)+HOSTSTATION+DATALENGTH+TIMER+ CMD+SUBCMD+DEVICE+DEVICENUM+DEVICEPOINT;
+
+const char* ON_DATA = "00010000";
+const char* OFF_DATA = "00000000";
+
+
+
+
+void setup() {
+ Ethernet.begin(mac,ip); 
+ Serial.begin(9600);
+ Timer1.initialize(10000);
+ Timer1.attachInterrupt(Timer_fnc);
+
+ pinMode(30,OUTPUT);
+ pinMode(32,OUTPUT);
+ pinMode(34,OUTPUT);
+ pinMode(36,OUTPUT);
+
+ pinMode(22,INPUT_PULLUP);
+ pinMode(24,INPUT_PULLUP);
+ pinMode(26,INPUT_PULLUP);
+ pinMode(28,INPUT_PULLUP);
+ 
+
+ digitalWrite(30,HIGH);
+ digitalWrite(32,HIGH);
+ digitalWrite(34,HIGH);
+ digitalWrite(36,HIGH);
+
+ if(client.connect(plc_ip, 6001)){
+    Serial.println("Connected to PLC");
+
+ }
+ else{
+    Serial.println("Connection failed");
+ }
+
+}
+int i;
+int sw1, sw2, sw3, sw4;
+int state;
+void Timer_fnc()
+{
+  sw1 = digitalRead(22);
+  sw2 = digitalRead(24);
+ 
+  
+  if(sw1==1 && sw2==1 && sw3==1 && sw4==1 ){
+    // 인식할 필요가 없음(스위치가 눌리지 않았기 때문)
+    state = 0;
+  }
+  else{
+    if(sw1==0){
+      state = 100;
+    }
+    if(sw2==0){
+      state = 200;
+    }  
+  }
+}
+
+void loop() {
+ 
+ String msg;
+
+ switch(state){
+  case 100:
+    digitalWrite(30,LOW);
+    digitalWrite(32,HIGH);
+    msg = cmd+ON_DATA;
+    client.print(msg);
+    state = 500;
+  break;
+
+  case 200:
+    digitalWrite(30,HIGH);
+    digitalWrite(32,LOW);
+     msg = cmd+OFF_DATA;
+    client.print(msg);
+    state = 500;
+  break;
+
+  case 500:
+  break;
+
+ }
+
+ if(client.available()){
+  char c = client.read();
+  Serial.print(c);
+ }
+
+}
