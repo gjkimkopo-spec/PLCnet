@@ -1,0 +1,128 @@
+#include <TimerOne.h>
+#include <SPI.h>
+#include <Ethernet.h>
+
+//아두이노 IP, MAC
+byte mac[]={0xAC, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip(192, 168, 3, 21);
+
+// PLC IP
+IPAddress plc_ip(192, 168, 3, 39);
+EthernetClient client;
+
+const char* FRAME_3E = "5000";
+const char* HOSTSTATION = "00FF03FF00";
+const char* DATALENGTH = "0020";
+const char* TIMER = "0010";
+
+const char* CMD = "1401";
+const char* SUBCMD="0000";
+const char* DEVICE ="M*";
+const char* DEVICENUM="000100";
+const char* DEVICEPOINT="0002";
+
+String cmd=String(FRAME_3E)+HOSTSTATION+DATALENGTH+TIMER+ CMD+SUBCMD+DEVICE+DEVICENUM+DEVICEPOINT;
+
+
+const char* rear_data = "0000";//문자열
+
+const int  lamp1_on = 0x0001;//숫자
+const int  lamp1_off = ~(0x0001);//숫자=0xfffe
+
+const int lamp2_on = 0x0002;
+const int lamp2_off = ~(0x0002); //
+
+const int lamp3_on = 0x0004;
+const int lamp3_off = ~(0x0004); //
+
+const int lamp4_on = 0x0008;
+const int lamp4_off = ~(0x0008); //
+
+
+
+union SWData { // 사용자 정의 데이터 타입
+  uint8_t value;
+
+  struct {
+    uint8_t sw0 : 1;
+    uint8_t sw1 : 1;
+    uint8_t sw2 : 1;
+    uint8_t sw3 : 1;
+  } bit;
+};
+
+SWData tmpSW;
+
+void setup() {
+ Ethernet.begin(mac,ip); 
+ Serial.begin(9600);
+ Timer1.initialize(500000);
+ Timer1.attachInterrupt(Timer_fnc);
+
+ pinMode(30,OUTPUT);
+ pinMode(32,OUTPUT);
+ pinMode(34,OUTPUT);
+ pinMode(36,OUTPUT);
+
+ pinMode(22,INPUT_PULLUP);
+ pinMode(24,INPUT_PULLUP);
+ pinMode(26,INPUT_PULLUP);
+ pinMode(28,INPUT_PULLUP);
+ 
+
+ digitalWrite(30,HIGH);
+ digitalWrite(32,HIGH);
+ digitalWrite(34,HIGH);
+ digitalWrite(36,HIGH);
+
+ if(client.connect(plc_ip, 6001)){
+    Serial.println("Connected to PLC");
+
+ }
+ else{
+    Serial.println("Connection failed");
+ }
+
+}
+int i;
+int sw1, sw2, sw3, sw4;
+int state;
+
+int write_data;
+char hexstr[9];
+void Timer_fnc()
+{
+  write_data++;
+
+  sprintf(hexstr,"%08X",write_data);
+  
+  state = 100;
+}
+
+int final_data;
+
+int sw1_cnt, sw2_cnt, sw3_cnt, sw4_cnt;
+
+
+
+void loop() {
+ 
+ String msg;
+ 
+ switch(state){
+  case 100: //lamp1_on
+      msg = cmd+hexstr;
+      client.print(msg);
+      state=500;
+    break;
+  case 500:
+    break;
+ }
+
+ 
+ if(client.available()){
+  char c = client.read();
+  Serial.print(c);
+ }
+
+}
