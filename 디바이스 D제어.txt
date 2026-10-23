@@ -1,0 +1,148 @@
+#include <TimerOne.h>
+#include <SPI.h>
+#include <Ethernet.h>
+
+//아두이노 IP, MAC
+byte mac[]={0xAC, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip(192, 168, 3, 21);
+
+// PLC IP
+IPAddress plc_ip(192, 168, 3, 39);
+EthernetClient client;
+
+const char* FRAME_3E = "5000";
+const char* HOSTSTATION = "00FF03FF00";
+const char* DATALENGTH = "0020";
+const char* TIMER = "0010";
+
+const char* CMD = "1401";
+const char* SUBCMD="0000";
+const char* DEVICE ="D*";
+const char* DEVICENUM="000100";
+const char* DEVICEPOINT="0002";
+
+String cmd=String(FRAME_3E)+HOSTSTATION+DATALENGTH+TIMER+ CMD+SUBCMD+DEVICE+DEVICENUM+DEVICEPOINT;
+
+const char* rear_data = "0000";//문자열
+
+void setup() {
+ Ethernet.begin(mac,ip); 
+ Serial.begin(9600);
+ Timer1.initialize(10000);
+ Timer1.attachInterrupt(Timer_fnc);
+
+ pinMode(30,OUTPUT);
+ pinMode(32,OUTPUT);
+ pinMode(34,OUTPUT);
+ pinMode(36,OUTPUT);
+
+ pinMode(22,INPUT_PULLUP);
+ pinMode(24,INPUT_PULLUP);
+ pinMode(26,INPUT_PULLUP);
+ pinMode(28,INPUT_PULLUP);
+ 
+
+ digitalWrite(30,HIGH);
+ digitalWrite(32,HIGH);
+ digitalWrite(34,HIGH);
+ digitalWrite(36,HIGH);
+
+ if(client.connect(plc_ip, 6001)){
+    Serial.println("Connected to PLC");
+
+ }
+ else{
+    Serial.println("Connection failed");
+ }
+
+}
+
+int sensor;
+int state;
+
+void Timer_fnc()
+{
+  sensor = analogRead(A0);
+
+  state = 100;
+}
+
+int final_data;
+
+char final_str[5];//배열로 선언
+
+void loop() {
+ 
+ String msg;
+ 
+ switch(state){
+  case 100:
+    digitalWrite(30,LOW);
+    digitalWrite(32,HIGH);
+
+    //Serial.println(sensor);
+
+    
+    final_data = sensor;
+
+    sprintf(final_str,"%04X",final_data);
+
+    msg = cmd+final_str+ rear_data;
+    client.print(msg);
+    
+    state = 500;
+  break;
+
+  case 200:
+    digitalWrite(30,HIGH);
+    digitalWrite(32,LOW);
+    /*
+    final_data = 234;
+
+    sprintf(final_str,"%04X",final_data);
+
+     msg = cmd+final_str+ rear_data;
+    client.print(msg);
+    */
+    state = 500;
+  break;
+
+  case 300:
+    digitalWrite(30,LOW);
+    digitalWrite(32,LOW);
+    /*
+    final_data = 3678;
+
+    sprintf(final_str,"%04X",final_data);
+
+    msg = cmd+final_str+ rear_data;
+    client.print(msg);
+    */
+    state = 500;
+  break;
+
+  case 400:
+    digitalWrite(30,HIGH);
+    digitalWrite(32,HIGH);
+    /*
+    final_data = 4320;
+
+    sprintf(final_str,"%04X",final_data);
+
+     msg = cmd+final_str+ rear_data;
+    client.print(msg);
+    */
+    state = 500;
+  break;
+
+  case 500:
+  break;
+
+ }
+
+ if(client.available()){
+  char c = client.read();
+  Serial.print(c);
+ }
+
+}
