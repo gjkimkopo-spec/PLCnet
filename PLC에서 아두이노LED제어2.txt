@@ -1,0 +1,125 @@
+#include <TimerOne.h>
+
+#include <SPI.h>
+#include <Ethernet.h>
+
+// 아두이노 IP, MAC 주소
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress ip(192, 168, 3, 20); // 아두이노 IP
+IPAddress plc_ip(192, 168, 3, 39); // PLC IP
+EthernetClient client;
+
+// 아두이노가 쓸 때
+const char* FRAME_3E = "5000";
+const char* HOSTSTATION = "00FF03FF00";
+const char* DATALENGTH = "0018"; // For Write , 참고 "0018" : For Read
+const char* TIMER = "0010";
+
+
+const char* CMD ="0401";//For Write, 참고 "0401" : For Read
+const char* SUBCMD = "0000";
+const char* DEVICE = "X*";
+const char* DEVICENUM="000100";//
+const char* DEVICEPOINT = "0002";
+
+String cmd = String(FRAME_3E)+ HOSTSTATION+DATALENGTH+TIMER+CMD+SUBCMD+DEVICE+DEVICENUM+ DEVICEPOINT;
+
+
+
+
+
+void setup() {
+  Serial.begin(9600);
+
+  Ethernet.begin(mac, ip); 
+  delay(1000);
+
+ 
+ 
+  pinMode(22,INPUT_PULLUP);
+  pinMode(24,INPUT_PULLUP);
+  pinMode(26,INPUT_PULLUP);
+  pinMode(28,INPUT_PULLUP);
+  
+  pinMode(30,OUTPUT);
+  pinMode(32,OUTPUT);
+  pinMode(34,OUTPUT);
+  pinMode(36,OUTPUT);
+  //초기화(LED all off)
+  digitalWrite(30,HIGH);
+  digitalWrite(32,HIGH);
+  digitalWrite(34,HIGH);
+  digitalWrite(36,HIGH);
+
+  if (client.connect(plc_ip, 6001)) {
+    Serial.println("Connected to PLC");           
+    }
+
+  else {
+    Serial.println("Connection failed");
+    client.stop();
+    delay(1000);
+  }
+  
+}
+
+int state=0;
+
+void loop() {
+  String msg;
+   String response="";
+  if(client.connected()){ // 송신
+    switch(state){
+      case 0:
+        digitalWrite(30,LOW);    
+        msg = cmd;
+        client.print(msg);            
+        state=100;// 연속적으로 명령어가 나가지 않도록 처리함
+        break;
+    
+      case 100:// 명령어가 연속적으로 나가지 않고, Timer_fnc()가 제어하도록 함
+        digitalWrite(30,HIGH);
+        break;
+    }
+  }
+   while(client.available()) { // 수신
+    char c = client.read();
+    response +=c;    
+  }
+  int len = response.length();
+ 
+  String SubStr = response.substring(22,26);
+ 
+  int num =(int) strtol(SubStr.c_str(),NULL,16);
+   Serial.println(num);
+
+  if(num&0x1){
+    digitalWrite(30,LOW);
+  }
+  else{
+    digitalWrite(30,HIGH);
+  }
+  if(num&0x2){
+    digitalWrite(32,LOW);
+  }
+  else{
+    digitalWrite(32,HIGH);
+  }
+  if(num&0x4){
+    digitalWrite(34,LOW);
+  }
+  else{
+    digitalWrite(34,HIGH);
+  }
+  if(num&0x8){
+    digitalWrite(36,LOW);
+  }
+  else{
+    digitalWrite(36,HIGH);
+  }
+   
+  state=0;
+  delay(10);
+
+
+}
